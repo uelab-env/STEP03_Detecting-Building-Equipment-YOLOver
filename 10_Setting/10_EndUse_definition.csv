@@ -1,0 +1,13 @@
+Fuel,EndUse,Data1,Data2,Data3,Data4
+Electricity,Lighting,ElectricityDemandDetails_InteriorLights,ElectricityDemandDetails_ExteriorLights,,
+Electricity,Equipment,ElectricityDemandDetails_InteriorEquipment,,,
+Electricity,HVAC auxiliary,ElectricityDemandDetails_Fans,ElectricityDemandDetails_Pumps,ElectricityDemandDetails_HeatRejection,ElectricityDemandDetails_Humidifier
+Electricity,Heating HS,ElectricityDemandDetails_Heating,ElectricityDemandDetails_WaterSystems,,
+Electricity,Cooling HS,ElectricityDemandDetails_Cooling,,,
+Electricity,DHW,ElectricityDemandDetails_DHW,,,
+Electricity,Refrigeration,ElectricityDemandDetails_Refrigeration,,,
+Electricity,Others,,,,
+Fuel,Heating HS,GasDemandDetails_Heating_,,,
+Fuel,Cooling HS,GasDemandDetails_Cooling_,,,
+Fuel,DHW,GasDemandDetails_DHW,,,
+Fuel,Others,GasDemandDetails_ExteriorEquipment,,,
