@@ -39,16 +39,52 @@ sampling_buildings <- function(dir, tar_year, tar_b, MODE){
   ncol_TFA_to <- which(names(TFA) == "TFA")
   ncol_regionB <- which(names(tar_b) == "RegionBuilding")
   ncol_sourceName <- which(colnames(tar_b) == "SourceBuildingName")
+  ncol_plant <- which(colnames(tar_b) == "PlantYOLO")
   
   
   TFA_out <- apply(tar_b, 1, function(zz){
     # print(zz[ncol_regionB])
     
     yy <- subset(TFA, n_b == zz[ncol_b] & n_cl == zz[ncol_b + 1])
+
+    # 候補が0件の場合、一旦「用途」のみで全件抽出しておく
     if(nrow(yy) == 0){
+      yy <- subset(TFA, n_b == zz[ncol_b])
+    }
+    
+    # -------------------------------------------------------------
+    # --- 追加: plant_YOLOの値に応じた条件付きサンプリング母集団の形成 ---
+    # -------------------------------------------------------------
+    if("PlantYOLO" %in% names(zz)) {
+      yolo <- zz["PlantYOLO"]
+      allowed_plants <- NULL
       
+      if(!is.na(yolo) && yolo != "NA" && yolo != "") {
+        if(yolo == "CT"){
+          allowed_plants <- c("ABCH", "TB", "AB", "COM", "COM+TESICE")
+        } else if(yolo == "ACC"){
+          allowed_plants <- c("AHP", "AHP+TESICE")
+        } else if(yolo %in% c("PAC", "MUL")){
+          allowed_plants <- c("EHP", "GHP")
+        }
+      }
+      
+      # TFAデータベース側の空調システム列名が "Plant" であると仮定して絞り込みます。
+      # （※実際のデータベースで列名が異なる場合は "Plant" の部分を修正してください）
+      if(!is.null(allowed_plants) && "Plant" %in% colnames(yy)) {
+        yy_filtered <- subset(yy, Plant %in% allowed_plants)
+        
+        # 絞り込んだ結果、該当するモデルが存在する場合のみ母集団を上書きする
+        if(nrow(yy_filtered) > 0){
+          yy <- yy_filtered
+        }
+      }
+    }
+    # -------------------------------------------------------------
+    
+    # 絞り込み等を経てそれでも候補が0件の場合は、エラー回避のため最初の1件を採用
+    if(nrow(yy) == 0){
       yy <- subset(TFA, n_b == zz[ncol_b])[1,]
-      
     }
     
     if(MODE == "Single"){
@@ -62,7 +98,7 @@ sampling_buildings <- function(dir, tar_year, tar_b, MODE){
         out <- as.character(yy[kk, ])
       }
       out[ncol_TFA_to] <- zz[ncol_TFA_from]
-      out <- c(out, zz[ncol_regionB], zz[ncol_sourceName])
+      out <- c(out, zz[ncol_regionB], zz[ncol_sourceName], zz[ncol_plant])
       
     }else{
       
@@ -72,10 +108,15 @@ sampling_buildings <- function(dir, tar_year, tar_b, MODE){
       kk <- sample(c(1:length(prob)), size = n_size, replace = F, prob = prob)
       
       if(length(kk) == 0){
-        out <- as.character(c(yy[1, ], zz[ncol_regionB], zz[ncol_sourceName]))
+        out <- as.character(c(yy[1, ], zz[ncol_regionB], zz[ncol_sourceName], zz[ncol_plant]))
         out[ncol_TFA_to] <- zz[ncol_TFA_from]
       }else{
-        out <- cbind(yy[kk, ], rep(zz[ncol_regionB], length(kk)), rep(zz[ncol_sourceName], length(kk)))
+        out <- cbind(
+          yy[kk, ],
+          rep(zz[ncol_regionB], length(kk)),
+          rep(zz[ncol_sourceName], length(kk)),
+          rep(zz[ncol_plant], length(kk))
+        )
         out[, ncol_TFA_to] <-  rep(zz[ncol_TFA_from], length(kk))
         out <- as.character(t(out))
       }
@@ -86,10 +127,10 @@ sampling_buildings <- function(dir, tar_year, tar_b, MODE){
     out
   })
 
-  TFA_out <- t(matrix(unlist(TFA_out), nrow = ncol(TFA)+2))
+  TFA_out <- t(matrix(unlist(TFA_out), nrow = ncol(TFA)+3))
 
   TFA_out <- data.frame(TFA_out)
-  names(TFA_out) <- c(names(TFA), "RegionBuilding", "SourceBuildingName")
+  names(TFA_out) <- c(names(TFA), "RegionBuilding", "SourceBuildingName", "PlantYOLO")
 
   # TFA_out$Remarks <- sprintf("%s_%s", formatC(as.integer(tar_b$X), width = 2, flag = "0"), 
   #                            tar_b$BuildingName)
@@ -144,6 +185,7 @@ sampling_DHW <- function(TFA_out, tar_year){
   rownames(selected_scenario) <- no_b_out
   selected_scenario$RegionBuilding <- no_reg
   selected_scenario$SourceBuildingName <- TFA_out$SourceBuildingName[no_b_out]
+  selected_scenario$PlantYOLO <- TFA_out$PlantYOLO[no_b_out]
   
   selected_scenario
 }
@@ -153,12 +195,12 @@ sampling_DHW <- function(TFA_out, tar_year){
 make_scenario_for_all_candidates <- function(area, region, year, tar_b){
  
   ff <- "10_Setting/00_SegmentCategory.csv"
-  SegmentSetting <- read.csv(ff, stringsAsFactors = F, fileEncoding = "shift-jis")
+  SegmentSetting <- read.csv(ff, stringsAsFactors = F, fill = TRUE)
   usage_code <- c("01_Office","02_Hotel","03_Hospital","04_Retail", "05_School", "06_Restaurant", "07_Datacenter", "08_Logistics", "09_Amusement")
   usage_code2 <- c("Office","Hotel","Hospital","Retail", "School", "Restaurant", "Datacenter", "Logistics", "Amusement")
   
   fname <- "./10_Setting/01_TFA_Archetype.csv"
-  archetypes <- read.csv(fname, stringsAsFactors = F, fileEncoding = "shift-jis")
+  archetypes <- read.csv(fname, stringsAsFactors = F, fill = TRUE)
   
   
   
@@ -236,12 +278,12 @@ make_scenario_for_all_candidates <- function(area, region, year, tar_b){
 
 
 ff <- "10_Setting/00_SegmentCategory.csv"
-SegmentSetting <- read.csv(ff, stringsAsFactors = F, fileEncoding = "shift-jis")
+SegmentSetting <- read.csv(ff, stringsAsFactors = F, fill = TRUE)
 usage_code <- c("01_Office","02_Hotel","03_Hospital","04_Retail", "05_School", "06_Restaurant", "07_Datacenter", "08_Logistics", "09_Amusement")
 usage_code2 <- c("Office","Hotel","Hospital","Retail", "School", "Restaurant", "Datacenter", "Logistics", "Amusement")
 
 fname <- "./10_Setting/01_TFA_Archetype.csv"
-archetypes <- read.csv(fname, stringsAsFactors = F, fileEncoding = "shift-jis")
+archetypes <- read.csv(fname, stringsAsFactors = F, fill = TRUE)
 
 
 
@@ -250,7 +292,7 @@ area <- "TokyoChuo"
 region <- "Tokyo"
 year <- 2022
 fileEncoding <- "UTF-8"
-# fileEncoding <- "shift-jis"
+#fileEncoding <- "shift-jis"
 
 colname_TFA <- "floor_area"
 colname_building_segment <- "building_usage"
@@ -259,8 +301,13 @@ colname_building_subsegment <- "building_usage_detailed_sim"
 colname_is_target <- "is_target"
 
 ff <- sprintf("00_BuildingList/%s.csv", area)
-Buildings <- read.csv(ff, stringsAsFactors = F, fileEncoding = fileEncoding, row.names = 1, check.names = FALSE)
-Buildings$SourceBuildingName <- Buildings[["建物名"]]
+# Use fread for better BOM handling
+Buildings <- as.data.frame(fread(ff, encoding = "UTF-8", check.names = FALSE))
+rownames(Buildings) <- Buildings[[1]]
+Buildings <- Buildings[, -1]
+
+# Column 7 is building name in TokyoChuo.csv structure (after removing ID)
+Buildings$SourceBuildingName <- Buildings[[7]]
 Buildings$Region <- region
 
 dir <- "02_SelectedBuildingModels"
@@ -283,9 +330,21 @@ if(MODE == 1){
   Buildings$RegionBuilding <- sprintf("B%s", formatC(c(1:nrow(Buildings)), width = 5, flag = "0"))
   
   # ターゲットの建物のみを抽出
-  Buildings[colname_is_target] <- as.logical(Buildings[[colname_is_target]])
-  Buildings <- subset(Buildings, Buildings[[colname_is_target]])
+  print(paste("Buildings shape before subset:", nrow(Buildings), "rows,", ncol(Buildings), "cols"))
+  print(paste("Checking column:", colname_is_target))
+  print(paste("Column exists:", colname_is_target %in% colnames(Buildings)))
   
+  if(!colname_is_target %in% colnames(Buildings)) {
+    print(paste("WARNING: Column", colname_is_target, "not found. Available columns:"))
+    print(colnames(Buildings))
+    # Fallback: assume all records are targets
+    Buildings$is_target <- TRUE
+  }
+  
+  Buildings[colname_is_target] <- as.logical(Buildings[[colname_is_target]])
+  print(paste("is_target values - TRUE:", sum(Buildings[[colname_is_target]], na.rm=TRUE), "FALSE:", sum(!Buildings[[colname_is_target]], na.rm=TRUE)))
+  Buildings <- subset(Buildings, Buildings[[colname_is_target]])
+  print(paste("Buildings shape after subset:", nrow(Buildings), "rows"))
   
   buildings <- data.frame(
     Region = Buildings$Region,
@@ -295,6 +354,7 @@ if(MODE == 1){
     SubSegment = Buildings[[colname_building_subsegment]],
     TFA = Buildings[[colname_TFA]]
   )
+  print(paste("buildings shape:", nrow(buildings), "rows,", ncol(buildings), "cols"))
 
   
   buildings$SegBESM <- usage_code[as.integer(factor(buildings$Segment, levels = SegmentSetting$Usage))]
@@ -307,19 +367,31 @@ if(MODE == 1){
   
   mat_seg <- matrix(nrow = nrow(buildings), ncol = 3, NA)
   colnames(mat_seg) <- c("Building", "Cluster", "Zoning")
+  print(paste("mat_seg initial shape:", nrow(mat_seg), "rows,", ncol(mat_seg), "cols"))
   
   
   # 事務所、宿泊、医療
   for(kk in c(1:3)){
     nn <- which(buildings$SegBESM == usage_code[kk])
-    out <- t(apply(buildings[nn, c(ncol_SegBSEM, ncol_TFA)], 1, function(aa){
-      tar <- subset(archetypes, archetypes$Building == as.character(aa[1]))
-      bb <- subset(tar, as.numeric(aa[2]) >= tar$MinTFA)
-      as.character(bb[nrow(bb), c(1:3)])
-    }))
-    
-    for(ii in c(1:3)){
-      mat_seg[nn, ii] <- out[, ii]
+    if(length(nn) > 0) {
+      out <- t(apply(buildings[nn, c(ncol_SegBSEM, ncol_TFA)], 1, function(aa){
+        tar <- subset(archetypes, archetypes$Building == as.character(aa[1]))
+        bb <- subset(tar, as.numeric(aa[2]) >= tar$MinTFA)
+        if(nrow(bb) > 0) {
+          as.character(bb[nrow(bb), c(1:3)])
+        } else {
+          c(NA, NA, NA)
+        }
+      }))
+      
+      # Ensure out is a matrix (not a vector if only one row)
+      if(!is.matrix(out)) {
+        out <- matrix(out, nrow = 1)
+      }
+      
+      for(ii in c(1:3)){
+        mat_seg[nn, ii] <- out[, ii]
+      }
     }
   }
   
@@ -330,15 +402,27 @@ if(MODE == 1){
       next
     }
     out <- t(apply(buildings[nn, c(ncol_SegBSEM, ncol_SubSeg, ncol_TFA)], 1, function(aa){
-      
       mm <- which(archetypes$Building == as.character(aa[1]) & archetypes$Cluster == as.character(aa[2]))
-      as.character(archetypes[mm, c(1:3)])
+      if(length(mm) > 0) {
+        as.character(archetypes[mm, c(1:3)])
+      } else {
+        c(NA, NA, NA)
+      }
     }))
+    
+    # Ensure out is a matrix (not a vector if only one row)
+    if(!is.matrix(out)) {
+      out <- matrix(out, nrow = 1)
+    }
     
     for(ii in c(1:3)){
       mat_seg[nn, ii] <- out[, ii]
     }
   }  
+  
+  print(paste("Before tar_b: Buildings=", nrow(Buildings), "rows, mat_seg=", nrow(mat_seg), "rows"))
+  print(paste("Columns to use: RegionBuilding=", length(Buildings$RegionBuilding), ", Region=", length(Buildings$Region)))
+  print(paste("              floor_area=", length(Buildings$floor_area), ", SourceBuildingName=", length(Buildings$SourceBuildingName)))
   
   tar_b <- data.frame(BuildingName = Buildings$RegionBuilding,
                       Area = Buildings$Region,
@@ -346,9 +430,8 @@ if(MODE == 1){
                       Cluster = mat_seg[,2],
                       TFA = Buildings$floor_area,
                       RegionBuilding = Buildings$RegionBuilding,
-                      SourceBuildingName = Buildings$SourceBuildingName)
-  
-  
+                      SourceBuildingName = Buildings$SourceBuildingName,
+                      PlantYOLO = Buildings$plant)
 }
 
 make_scenario_for_all_candidates(area, region, year, tar_b)
