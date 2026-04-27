@@ -38,7 +38,6 @@ sampling_buildings <- function(dir, tar_year, tar_b, MODE){
   ncol_TFA_from <- which(colnames(tar_b) == "TFA")
   ncol_TFA_to <- which(names(TFA) == "TFA")
   ncol_regionB <- which(names(tar_b) == "RegionBuilding")
-  ncol_sourceName <- which(colnames(tar_b) == "SourceBuildingName")
   ncol_plant <- which(colnames(tar_b) == "PlantYOLO")
   
   
@@ -98,7 +97,7 @@ sampling_buildings <- function(dir, tar_year, tar_b, MODE){
         out <- as.character(yy[kk, ])
       }
       out[ncol_TFA_to] <- zz[ncol_TFA_from]
-      out <- c(out, zz[ncol_regionB], zz[ncol_sourceName], zz[ncol_plant])
+      out <- c(out, zz[ncol_regionB], zz[ncol_plant])
       
     }else{
       
@@ -108,13 +107,12 @@ sampling_buildings <- function(dir, tar_year, tar_b, MODE){
       kk <- sample(c(1:length(prob)), size = n_size, replace = F, prob = prob)
       
       if(length(kk) == 0){
-        out <- as.character(c(yy[1, ], zz[ncol_regionB], zz[ncol_sourceName], zz[ncol_plant]))
+        out <- as.character(c(yy[1, ], zz[ncol_regionB], zz[ncol_plant]))
         out[ncol_TFA_to] <- zz[ncol_TFA_from]
       }else{
         out <- cbind(
           yy[kk, ],
           rep(zz[ncol_regionB], length(kk)),
-          rep(zz[ncol_sourceName], length(kk)),
           rep(zz[ncol_plant], length(kk))
         )
         out[, ncol_TFA_to] <-  rep(zz[ncol_TFA_from], length(kk))
@@ -127,10 +125,10 @@ sampling_buildings <- function(dir, tar_year, tar_b, MODE){
     out
   })
 
-  TFA_out <- t(matrix(unlist(TFA_out), nrow = ncol(TFA)+3))
+  TFA_out <- t(matrix(unlist(TFA_out), nrow = ncol(TFA)+2))
 
   TFA_out <- data.frame(TFA_out)
-  names(TFA_out) <- c(names(TFA), "RegionBuilding", "SourceBuildingName", "PlantYOLO")
+  names(TFA_out) <- c(names(TFA), "RegionBuilding", "PlantYOLO")
 
   # TFA_out$Remarks <- sprintf("%s_%s", formatC(as.integer(tar_b$X), width = 2, flag = "0"), 
   #                            tar_b$BuildingName)
@@ -184,7 +182,6 @@ sampling_DHW <- function(TFA_out, tar_year){
   selected_scenario <- candidates[no_b_DHW, ]
   rownames(selected_scenario) <- no_b_out
   selected_scenario$RegionBuilding <- no_reg
-  selected_scenario$SourceBuildingName <- TFA_out$SourceBuildingName[no_b_out]
   selected_scenario$PlantYOLO <- TFA_out$PlantYOLO[no_b_out]
   
   selected_scenario
@@ -195,12 +192,12 @@ sampling_DHW <- function(TFA_out, tar_year){
 make_scenario_for_all_candidates <- function(area, region, year, tar_b){
  
   ff <- "10_Setting/00_SegmentCategory.csv"
-  SegmentSetting <- read.csv(ff, stringsAsFactors = F, fill = TRUE)
+  SegmentSetting <- read.csv(ff, stringsAsFactors = F, fill = TRUE, fileEncoding = "shift-jis")
   usage_code <- c("01_Office","02_Hotel","03_Hospital","04_Retail", "05_School", "06_Restaurant", "07_Datacenter", "08_Logistics", "09_Amusement")
   usage_code2 <- c("Office","Hotel","Hospital","Retail", "School", "Restaurant", "Datacenter", "Logistics", "Amusement")
   
   fname <- "./10_Setting/01_TFA_Archetype.csv"
-  archetypes <- read.csv(fname, stringsAsFactors = F, fill = TRUE)
+  archetypes <- read.csv(fname, stringsAsFactors = F, fill = TRUE, fileEncoding = "shift-jis")
   
   
   
@@ -251,11 +248,11 @@ make_scenario_for_all_candidates <- function(area, region, year, tar_b){
     
     ff <- sprintf("%s/00_%s_Buildings_%s.csv", out_dir, area, tar_year)
     print(ff)
-    write.csv(TFA_out, ff, fileEncoding = "shift-jis")
+    write.csv(TFA_out, ff, fileEncoding = "UTF-8")
     
     ff <- sprintf("%s/00_%sDHW_Buildings_%s.csv", out_dir, area, tar_year)
     print(ff)
-    write.csv(TFA_DHW, ff, fileEncoding = "shift-jis")
+    write.csv(TFA_DHW, ff, fileEncoding = "UTF-8")
     
   }
 
@@ -278,12 +275,12 @@ make_scenario_for_all_candidates <- function(area, region, year, tar_b){
 
 
 ff <- "10_Setting/00_SegmentCategory.csv"
-SegmentSetting <- read.csv(ff, stringsAsFactors = F, fill = TRUE)
+SegmentSetting <- read.csv(ff, stringsAsFactors = F, fill = TRUE, fileEncoding = "shift-jis")
 usage_code <- c("01_Office","02_Hotel","03_Hospital","04_Retail", "05_School", "06_Restaurant", "07_Datacenter", "08_Logistics", "09_Amusement")
 usage_code2 <- c("Office","Hotel","Hospital","Retail", "School", "Restaurant", "Datacenter", "Logistics", "Amusement")
 
 fname <- "./10_Setting/01_TFA_Archetype.csv"
-archetypes <- read.csv(fname, stringsAsFactors = F, fill = TRUE)
+archetypes <- read.csv(fname, stringsAsFactors = F, fill = TRUE, fileEncoding = "shift-jis")
 
 
 
@@ -306,8 +303,6 @@ Buildings <- as.data.frame(fread(ff, encoding = "UTF-8", check.names = FALSE))
 rownames(Buildings) <- Buildings[[1]]
 Buildings <- Buildings[, -1]
 
-# Column 7 is building name in TokyoChuo.csv structure (after removing ID)
-Buildings$SourceBuildingName <- Buildings[[7]]
 Buildings$Region <- region
 
 dir <- "02_SelectedBuildingModels"
@@ -422,7 +417,7 @@ if(MODE == 1){
   
   print(paste("Before tar_b: Buildings=", nrow(Buildings), "rows, mat_seg=", nrow(mat_seg), "rows"))
   print(paste("Columns to use: RegionBuilding=", length(Buildings$RegionBuilding), ", Region=", length(Buildings$Region)))
-  print(paste("              floor_area=", length(Buildings$floor_area), ", SourceBuildingName=", length(Buildings$SourceBuildingName)))
+  print(paste("              floor_area=", length(Buildings$floor_area)))
   
   tar_b <- data.frame(BuildingName = Buildings$RegionBuilding,
                       Area = Buildings$Region,
@@ -430,7 +425,6 @@ if(MODE == 1){
                       Cluster = mat_seg[,2],
                       TFA = Buildings$floor_area,
                       RegionBuilding = Buildings$RegionBuilding,
-                      SourceBuildingName = Buildings$SourceBuildingName,
                       PlantYOLO = Buildings$plant)
 }
 
