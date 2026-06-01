@@ -246,10 +246,23 @@ make_scenario_for_all_candidates <- function(area, region, year, tar_b){
     # print("Output2")  
     TFA_DHW$TFA <- TFA_out$TFA[nn_tar]
     
+    # 従来フォーマット（他プログラムの input として使用）
     ff <- sprintf("%s/00_%s_Buildings_%s.csv", out_dir, area, tar_year)
     print(ff)
     write.csv(TFA_out, ff, fileEncoding = "UTF-8")
-    
+
+    # 属性付きフォーマット（ID, 住所コード, building_usage, building_usage_detailed を先頭に追加）
+    meta_cols <- c("ID", "住所コード", "building_usage", "building_usage_detailed")
+    if(all(meta_cols %in% names(tar_b))) {
+      meta <- tar_b[, c("RegionBuilding", meta_cols)]
+      idx  <- match(TFA_out$RegionBuilding, meta$RegionBuilding)
+      TFA_out_enriched <- cbind(meta[idx, meta_cols, drop = FALSE], TFA_out)
+      rownames(TFA_out_enriched) <- NULL
+      ff <- sprintf("%s/00_%s_Buildings_%s_withAddress.csv", out_dir, area, tar_year)
+      print(ff)
+      write.csv(TFA_out_enriched, ff, fileEncoding = "UTF-8")
+    }
+
     ff <- sprintf("%s/00_%sDHW_Buildings_%s.csv", out_dir, area, tar_year)
     print(ff)
     write.csv(TFA_DHW, ff, fileEncoding = "UTF-8")
@@ -426,6 +439,11 @@ if(MODE == 1){
                       TFA = Buildings$floor_area,
                       RegionBuilding = Buildings$RegionBuilding,
                       PlantYOLO = Buildings$plant)
+
+  tar_b$ID                    <- rownames(Buildings)
+  tar_b[["住所コード"]]          <- Buildings[["住所コード"]]
+  tar_b[["building_usage"]]    <- Buildings[["building_usage"]]
+  tar_b[["building_usage_detailed"]] <- Buildings[["building_usage_detailed"]]
 }
 
 make_scenario_for_all_candidates(area, region, year, tar_b)
