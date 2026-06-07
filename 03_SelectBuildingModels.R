@@ -252,7 +252,7 @@ make_scenario_for_all_candidates <- function(area, region, year, tar_b){
     write.csv(TFA_out, ff, fileEncoding = "UTF-8")
 
     # 属性付きフォーマット（ID, 住所コード, building_usage, building_usage_detailed を先頭に追加）
-    meta_cols <- c("ID", "住所コード", "building_usage", "building_usage_detailed")
+    meta_cols <- c("ID", "住所コード", "建物名", "building_usage", "building_usage_detailed")
     if(all(meta_cols %in% names(tar_b))) {
       meta <- tar_b[, c("RegionBuilding", meta_cols)]
       idx  <- match(TFA_out$RegionBuilding, meta$RegionBuilding)
@@ -442,6 +442,7 @@ if(MODE == 1){
 
   tar_b$ID                    <- rownames(Buildings)
   tar_b[["住所コード"]]          <- Buildings[["住所コード"]]
+  tar_b[["建物名"]]              <- Buildings[["建物名"]]
   tar_b[["building_usage"]]    <- Buildings[["building_usage"]]
   tar_b[["building_usage_detailed"]] <- Buildings[["building_usage_detailed"]]
 }
