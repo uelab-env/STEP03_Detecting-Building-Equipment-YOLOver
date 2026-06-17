@@ -23,7 +23,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 df_yolo   = pd.read_csv(os.path.join(SCRIPT_DIR, "00_TokyoChuo_Buildings_Year2022.csv"),
                         index_col=0)
-df_noyolo = pd.read_csv(os.path.join(SCRIPT_DIR, "00_TokyoChuo_Buildings_Year2022_verHospital.csv"),
+df_noyolo = pd.read_csv(os.path.join(SCRIPT_DIR, "00_TokyoChuo_Buildings_Year2022_withoutYOLO.csv"),
                         index_col=0)
 
 df_yolo["TFA"]   = pd.to_numeric(df_yolo["TFA"],   errors="coerce")
