@@ -21,9 +21,9 @@ rcParams["font.size"]   = 24  # 全テキスト基本サイズ
 # ── データ読み込み ──────────────────────────────────────────────────────────────
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-df_yolo   = pd.read_csv(os.path.join(SCRIPT_DIR, "00_TokyoChuo_Buildings_Year2022_yolo.csv"),
-                        index_col=0)
 df_noyolo = pd.read_csv(os.path.join(SCRIPT_DIR, "00_TokyoChuo_Buildings_Year2022_ori.csv"),
+                        index_col=0)
+df_yolo   = pd.read_csv(os.path.join(SCRIPT_DIR, "00_TokyoChuo_Buildings_Year2022_yolo.csv"),
                         index_col=0)
 
 df_yolo["TFA"]   = pd.to_numeric(df_yolo["TFA"],   errors="coerce")
