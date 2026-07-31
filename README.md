@@ -11,6 +11,9 @@
 - R（バージョン 4.0 以上推奨）
 - RStudio（推奨、必須ではない）
 
+### 実行環境
+- Windows11のUbuntu 24.04.3 LTS
+
 ### 環境構築
 
 #### 1. Rのインストール
@@ -139,6 +142,8 @@ This project is a tool for selecting and sampling building energy models from re
 - RStudio (recommended but not required)
 
 ### Setup
+#### execution environment
+- Windows11のUbuntu 24.04.3 LTS
 
 #### 1. Install R
 For Ubuntu/Debian:
