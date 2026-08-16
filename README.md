@@ -18,14 +18,16 @@
 ### 環境構築
 本リポジトリでは、Rおよび必要なパッケージ一式を conda 仮想環境 `r_env` としてまとめて管理しています。個別に `install.packages()` を実行する必要はありません。
 
-#### 1. Anaconda/Minicondaのインストール
-未導入の場合は、[Anaconda公式サイト](https://www.anaconda.com/download)等からインストールしてください。
+#### 1. Anacondaのインストール
+未導入の場合は、[Anacondaのインストール手順](https://uelab.growi.cloud/61b187fa2c2460beb28066f9#:~:text=%23-,Anaconda%E3%81%AE%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB%20/%20Installation%20of%20Anaconda,-edit_square)からインストールしてください。
 
 #### 2. 仮想環境 `r_env` の作成
 リポジトリのルートディレクトリで以下を実行し、`gyomu_r_env.yaml` から仮想環境を作成します（初回のみ）：
 ```bash
 conda env create -n r_env -f gyomu_r_env.yaml
 ```
+- r_envという名前が既にある仮想環境の名前と被る場合は、任意の名前の仮想環境を設定してください
+- というか、このgyomu_r_envには、基礎的なパッケージしか入っていないので、既にお持ちのRの仮想環境でも対応可能だと思います
 
 #### 3. 仮想環境の有効化
 スクリプトを実行する際は、必ず事前に仮想環境を有効化してください：
@@ -67,12 +69,12 @@ install.packages("stringr")
 
 
 ##### 航空画像による熱源設備判定を使用しない場合
-1. 業務モデルの[STEP01]:(https://github.com/uelab-env/Building-Usage-Determination_py)の以下のパスの"地名".csvを入力ファイルとする  
+1. 業務モデルの[STEP01](https://github.com/uelab-env/Building-Usage-Determination_py)の以下のパスの"地名".csvを入力ファイルとする  
 ```01_Building-Usage-Determination\Building-Usage-Determination_py\"地名"\BuildingUsageDetermination_Chuo\"地名".csv```
 2. `00_BuildingList/` ディレクトリに、対象地域の建物リストCSVファイル"地名".csvを配置してください。
 
 ##### 航空画像による熱源設備判定を使用する場合
-1. 業務モデルの[STEP02]:(https://github.com/uelab-env/STEP02-Detecting-Building-Plant-byYOLOmodel)の以下のパスの"地名".csvを入力ファイルとする  
+1. 業務モデルの[STEP02](https://github.com/uelab-env/STEP02-Detecting-Building-Plant-byYOLOmodel)の以下のパスの"地名".csvを入力ファイルとする  
 ```output\"地名".csv```
 2. `00_BuildingList/` ディレクトリに、対象地域の建物リストCSVファイル"地名".csvを配置してください。
 
