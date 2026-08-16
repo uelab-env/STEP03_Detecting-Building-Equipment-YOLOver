@@ -8,23 +8,41 @@
 本プロジェクトは、地域の建物リストから、エネルギーシミュレーション用の建物モデルを選択・サンプリングするツールです。建物の用途、延床面積、クラスター、空調システムなどの属性に基づいて、複数年度のシナリオを作成します。
 
 ### 前提条件
-- R（バージョン 4.0 以上推奨）
+- Anaconda（またはMiniconda）
+- R（バージョン 4.0 以上推奨、後述のconda仮想環境に同梱）
 - RStudio（推奨、必須ではない）
 
 ### 実行環境
 - Windows11のUbuntu 24.04.3 LTS
 
 ### 環境構築
+本リポジトリでは、Rおよび必要なパッケージ一式を conda 仮想環境 `r_env` としてまとめて管理しています。個別に `install.packages()` を実行する必要はありません。
 
-#### 1. Rのインストール
-Ubuntu/Debianの場合：
+#### 1. Anaconda/Minicondaのインストール
+未導入の場合は、[Anaconda公式サイト](https://www.anaconda.com/download)等からインストールしてください。
+
+#### 2. 仮想環境 `r_env` の作成
+リポジトリのルートディレクトリで以下を実行し、`gyomu_r_env.yaml` から仮想環境を作成します（初回のみ）：
+```bash
+conda env create -n r_env -f gyomu_r_env.yaml
+```
+
+#### 3. 仮想環境の有効化
+スクリプトを実行する際は、必ず事前に仮想環境を有効化してください：
+```bash
+conda activate r_env
+```
+以後の手順（R起動、`source()`の実行など）は、この仮想環境を有効化した状態のターミナルで行ってください。作業が終わったら以下で無効化できます：
+```bash
+conda deactivate
+```
+
+#### （参考）仮想環境を使わない場合
+`r_env` を使わず、システムのRに直接パッケージを入れて動かすことも可能です。
 ```bash
 sudo apt update
 sudo apt install r-base r-base-dev
 ```
-
-#### 2. 必要なRパッケージのインストール
-Rコンソールまたはスクリプト内で以下を実行：
 ```r
 install.packages("data.table")
 install.packages("stringr")
@@ -37,7 +55,9 @@ install.packages("stringr")
 ├── 01_TFA_Proportion/        # 入力：延床面積データベース（年度別）
 ├── 02_SelectedBuildingModels/# 出力：選択された建物モデル
 ├── 10_Setting/               # 設定ファイル（用途分類、アーキタイプなど）
+├── area_config.R             # 対象エリアの設定ファイル（要編集）
 ├── 03_SelectBuildingModels.R # メインスクリプト
+├── gyomu_r_env.yaml          # conda仮想環境 r_env の定義ファイル
 └── README.md
 ```
 
@@ -46,18 +66,15 @@ install.packages("stringr")
 #### 1. 建物リストの準備
 
 
-##### STEP02航空画像による熱源設備判定を使用しない場合
-1. STEP01の以下のパスの"地名".csvを入力ファイルとする  
+##### 航空画像による熱源設備判定を使用しない場合
+1. 業務モデルの[STEP01]:(https://github.com/uelab-env/Building-Usage-Determination_py)の以下のパスの"地名".csvを入力ファイルとする  
 ```01_Building-Usage-Determination\Building-Usage-Determination_py\"地名"\BuildingUsageDetermination_Chuo\"地名".csv```
-1. `00_BuildingList/` ディレクトリに、対象地域の建物リストCSVファイル"地名".csvを配置してください。
-1. 301行目の```area <- "TokyoChuo"```をの"TokyoChuo"を建物リストCSVファイル"地名".csvの"地名"に変換する
+2. `00_BuildingList/` ディレクトリに、対象地域の建物リストCSVファイル"地名".csvを配置してください。
 
-##### STEP02航空画像による熱源設備判定を使用する場合
-1. STEP02の以下のパスの"地名".csvを入力ファイルとする  
+##### 航空画像による熱源設備判定を使用する場合
+1. 業務モデルの[STEP02]:(https://github.com/uelab-env/STEP02-Detecting-Building-Plant-byYOLOmodel)の以下のパスの"地名".csvを入力ファイルとする  
 ```output\"地名".csv```
-1. `00_BuildingList/` ディレクトリに、対象地域の建物リストCSVファイル"地名".csvを配置してください。
-1. 301行目の```area <- "TokyoChuo"```をの"TokyoChuo"を建物リストCSVファイル"地名".csvの"地名"に変換する
-
+2. `00_BuildingList/` ディレクトリに、対象地域の建物リストCSVファイル"地名".csvを配置してください。
 
 必須カラム：
 - `ID`: 建物ID
@@ -67,28 +84,11 @@ install.packages("stringr")
 - `is_target`: 対象建物フラグ（TRUE/FALSE）
 - `plant`: 空調システムタイプ（オプション）
 
-#### 2. スクリプトの実行
-
-**ステップ1**: Rを起動
-```bash
-R
-```
-
-**ステップ2**: 作業ディレクトリを設定
-```r
-setwd("/path/to/02b_G_Regional_BuildingList")
-```
-
-**ステップ3**: メインスクリプトを実行
-```r
-source("03_SelectBuildingModels.R")
-```
-
-#### 3. パラメータの設定
-スクリプト内の以下のパラメータを編集してください：
+#### 2. `area_config.R` の設定
+対象エリアなどのパラメータは、メインスクリプト（`03_SelectBuildingModels.R`）を直接編集するのではなく、専用の設定ファイル `area_config.R` を編集して指定します。リポジトリ直下の `area_config.R` をエディタで開き、以下の値を対象エリアに合わせて書き換えてください。
 
 ```r
-area <- "TokyoChuo"           # 対象地域名
+area <- "TokyoChuo"           # 対象地域名（00_BuildingList/ に置いたCSVファイル名と一致させる）
 region <- "Tokyo"             # 地方名
 year <- 2022                  # 基準年
 fileEncoding <- "UTF-8"       # ファイルエンコーディング
@@ -99,6 +99,22 @@ colname_building_segment <- "building_usage"
 colname_building_subsegment <- "building_usage_detailed_sim"
 colname_is_target <- "is_target"
 ```
+
+例えば `00_BuildingList/Yokohama.csv` を対象にする場合は `area <- "Yokohama"` のように書き換えます。`03_SelectBuildingModels.R` の実行時にこのファイルが自動的に読み込まれます。
+
+#### 3. スクリプトの実行
+
+**ステップ1**: （仮想環境を使用する場合）`r_env` を有効化
+```bash
+conda activate r_env
+```
+
+**ステップ2**: ファイルを実行
+```bash
+Rscript 03_SelectBuildingModels.R
+```
+
+01_SelectBuildingModels.Rは無視してください
 
 ### 出力ファイル
 
@@ -113,13 +129,14 @@ colname_is_target <- "is_target"
 ### トラブルシューティング
 
 #### エンコーディングエラーが発生する場合
+`area_config.R` の `fileEncoding` を変更してください：
 ```r
 fileEncoding <- "shift-jis"  # または "UTF-8"
 ```
 
 #### パッケージが見つからない場合
+まず `conda activate r_env` で仮想環境を有効化できているか確認してください。仮想環境を使わずシステムのRを使用している場合は、以下で個別にインストールしてください：
 ```r
-# 各パッケージを個別にインストール
 install.packages("data.table", dependencies = TRUE)
 install.packages("stringr", dependencies = TRUE)
 ```
@@ -130,6 +147,9 @@ Rのメモリ制限を増やす：
 # Linuxの場合
 memory.limit(size = NA)
 ```
+
+### 既知の制限事項
+`03_SelectBuildingModels.R` 内の「大字名」に基づく `エリア`（1〜4）の分類（`area1_names` 〜 `area4_names`）は、東京都中央区（`TokyoChuo`）を対象に作成されたものであり、他の地域を対象とする場合はこの分類が適用されません（`エリア` 列は `NA` になります）。中央区以外のエリアでこの分類を利用したい場合は、`03_SelectBuildingModels.R` 内の該当箇所を対象エリアの大字名に合わせて修正してください。
 
 ### 建物用途分類
 本ツールでサポートされる建物用途：
@@ -151,22 +171,41 @@ memory.limit(size = NA)
 This project is a tool for selecting and sampling building energy models from regional building lists for energy simulation purposes. It creates multi-year scenarios based on building attributes such as usage, total floor area, cluster, and HVAC systems.
 
 ### Prerequisites
-- R (version 4.0 or higher recommended)
+- Anaconda (or Miniconda)
+- R (version 4.0 or higher recommended; bundled in the conda environment described below)
 - RStudio (recommended but not required)
 
 ### Setup
 #### execution environment
 - Windows11のUbuntu 24.04.3 LTS
 
-#### 1. Install R
-For Ubuntu/Debian:
+This repository manages R and all required packages together as a conda virtual environment named `r_env`. You do not need to run `install.packages()` individually.
+
+#### 1. Install Anaconda/Miniconda
+If not already installed, get it from the [Anaconda website](https://www.anaconda.com/download).
+
+#### 2. Create the `r_env` virtual environment
+From the repository root, create the environment from `gyomu_r_env.yaml` (one-time setup):
+```bash
+conda env create -n r_env -f gyomu_r_env.yaml
+```
+
+#### 3. Activate the virtual environment
+Always activate the environment before running the script:
+```bash
+conda activate r_env
+```
+Perform the remaining steps (launching R, running `source()`, etc.) in a terminal where this environment is active. When you're done, you can deactivate it with:
+```bash
+conda deactivate
+```
+
+#### (Alternative) Without the virtual environment
+You can also install R directly on your system instead of using `r_env`:
 ```bash
 sudo apt update
 sudo apt install r-base r-base-dev
 ```
-
-#### 2. Install Required R Packages
-Execute in R console or within a script:
 ```r
 install.packages("data.table")
 install.packages("stringr")
@@ -179,42 +218,30 @@ install.packages("stringr")
 ├── 01_TFA_Proportion/        # Input: Total floor area database (by year)
 ├── 02_SelectedBuildingModels/# Output: Selected building models
 ├── 10_Setting/               # Configuration files (usage categories, archetypes)
+├── area_config.R             # Target area configuration file (edit this)
 ├── 03_SelectBuildingModels.R # Main script
+├── gyomu_r_env.yaml          # Definition file for the r_env conda environment
 └── README.md
 ```
 
 ### Usage
 #### 1. Prepare Building List
-## When **NOT** Using STEP02 (HVAC Equipment Detection from Aerial Images)
+## When Not Using Aerial-Image-Based HVAC Equipment Detection
 
-1. Use the following CSV file generated by **STEP01** as the input file:
+1. Use the following CSV file generated by **[STEP01](https://github.com/uelab-env/Building-Usage-Determination_py)** as the input file:
    ```
    01_Building-Usage-Determination/Building-Usage-Determination_py/<AreaName>/BuildingUsageDetermination_Chuo/<AreaName>.csv
    ```
 
 2. Place the target building list CSV file (`<AreaName>.csv`) in the `00_BuildingList/` directory.
 
-3. In line 301, replace `"TokyoChuo"` in the following code:
+## When Using Aerial-Image-Based HVAC Equipment Detection
 
-   ```R
-   area <- "TokyoChuo"
-   ```
-   with `<AreaName>`, which should match the filename of the building list CSV file (`<AreaName>.csv`).
-
-## When Using STEP02 (HVAC Equipment Detection from Aerial Images)
-
-1. Use the following CSV file generated by **STEP02** as the input file:
+1. Use the following CSV file generated by **[STEP02](https://github.com/uelab-env/STEP02-Detecting-Building-Plant-byYOLOmodel)** as the input file:
    ```
    output/<AreaName>.csv
    ```
 2. Place the target building list CSV file (`<AreaName>.csv`) in the `00_BuildingList/` directory.
-
-3. In line 301, replace `"TokyoChuo"` in the following code:
-
-   ```R
-   area <- "TokyoChuo"
-   ```
-   with `<AreaName>`, which should match the filename of the building list CSV file (`<AreaName>.csv`).
 
 Required columns:
 - `ID`: Building ID
@@ -224,28 +251,11 @@ Required columns:
 - `is_target`: Target building flag (TRUE/FALSE)
 - `plant`: HVAC system type (optional)
 
-#### 2. Execute Script
-
-**Step 1**: Launch R
-```bash
-R
-```
-
-**Step 2**: Set working directory
-```r
-setwd("/path/to/02b_G_Regional_BuildingList")
-```
-
-**Step 3**: Run main script
-```r
-source("03_SelectBuildingModels.R")
-```
-
-#### 3. Configure Parameters
-Edit the following parameters in the script:
+#### 2. Configure `area_config.R`
+Instead of editing the main script (`03_SelectBuildingModels.R`) directly, target-area parameters are set in a dedicated configuration file, `area_config.R`. Open `area_config.R` at the repository root in an editor and set the following values for your target area:
 
 ```r
-area <- "TokyoChuo"           # Target area name
+area <- "TokyoChuo"           # Target area name (must match the CSV filename placed in 00_BuildingList/)
 region <- "Tokyo"             # Region name
 year <- 2022                  # Base year
 fileEncoding <- "UTF-8"       # File encoding
@@ -256,6 +266,22 @@ colname_building_segment <- "building_usage"
 colname_building_subsegment <- "building_usage_detailed_sim"
 colname_is_target <- "is_target"
 ```
+
+For example, to target `00_BuildingList/Yokohama.csv`, set `area <- "Yokohama"`. This file is automatically loaded when `03_SelectBuildingModels.R` runs.
+
+#### 3. Execute Script
+
+**Step 1**: (If using the virtual environment) Activate `r_env`
+```bash
+conda activate r_env
+```
+
+**Step 2**: Run the script
+```bash
+Rscript 03_SelectBuildingModels.R
+```
+
+Please ignore `01_SelectBuildingModels.R`.
 
 ### Output Files
 
@@ -270,13 +296,14 @@ Multi-year scenarios (e.g., 2022, 2030, 2050) are automatically created.
 ### Troubleshooting
 
 #### Encoding Errors
+Change `fileEncoding` in `area_config.R`:
 ```r
 fileEncoding <- "shift-jis"  # or "UTF-8"
 ```
 
 #### Package Not Found
+First check that the virtual environment is active (`conda activate r_env`). If you're using your system's R without the virtual environment, install the packages individually:
 ```r
-# Install each package individually
 install.packages("data.table", dependencies = TRUE)
 install.packages("stringr", dependencies = TRUE)
 ```
@@ -287,6 +314,9 @@ Increase R memory limit:
 # For Linux
 memory.limit(size = NA)
 ```
+
+### Known Limitations
+The `エリア` (Area 1–4) classification based on `大字名` (sub-district name) in `03_SelectBuildingModels.R` (`area1_names` through `area4_names`) was built specifically for Tokyo's Chuo Ward (`TokyoChuo`) and does not apply to other regions (the `エリア` column will be `NA`). If you want to use this classification for an area other than Chuo Ward, edit that section of `03_SelectBuildingModels.R` to match the sub-district names of your target area.
 
 ### Building Usage Categories
 Supported building usage types:

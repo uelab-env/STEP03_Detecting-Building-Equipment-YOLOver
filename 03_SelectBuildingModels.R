@@ -252,12 +252,17 @@ make_scenario_for_all_candidates <- function(area, region, year, tar_b){
     write.csv(TFA_out, ff, fileEncoding = "UTF-8")
 
     # 属性付きフォーマット（ID, 住所コード, building_usage, building_usage_detailed を先頭に追加）
-    meta_cols <- c("ID", "住所コード", "大字名", "字丁目名", "建物名", "building_usage", "building_usage_detailed")
+    meta_cols <- c("ID", "住所コード", "大字名", "字丁目名", "建物名", "building_usage", "building_usage_detailed", "地域冷暖房計画区域", "is_target", "エリア")
     if(all(meta_cols %in% names(tar_b))) {
       meta <- tar_b[, c("RegionBuilding", meta_cols)]
       idx  <- match(TFA_out$RegionBuilding, meta$RegionBuilding)
       TFA_out_enriched <- cbind(meta[idx, meta_cols, drop = FALSE], TFA_out)
       rownames(TFA_out_enriched) <- NULL
+
+      # 指定カラムを先頭に配置
+      front_cols <- c("RegionBuilding", "エリア", "大字名", "字丁目名", "建物名", "地域冷暖房計画区域", "is_target", "building_usage", "building_usage_detailed", "PlantYOLO")
+      TFA_out_enriched <- TFA_out_enriched[, c(front_cols, setdiff(names(TFA_out_enriched), front_cols))]
+
       ff <- sprintf("%s/00_%s_Buildings_%s_withAddress.csv", out_dir, area, tar_year)
       print(ff)
       write.csv(TFA_out_enriched, ff, fileEncoding = "UTF-8")
@@ -298,17 +303,9 @@ archetypes <- read.csv(fname, stringsAsFactors = F, fill = TRUE, fileEncoding = 
 
 
 MODE <- 2
-area <- "TokyoChuo"
-region <- "Tokyo"
-year <- 2022
-fileEncoding <- "UTF-8"
-#fileEncoding <- "shift-jis"
 
-colname_TFA <- "floor_area"
-colname_building_segment <- "building_usage"
-colname_building_subsegment <- "building_usage_detailed_sim"
-# colname_Cat_PointData <- "building_usage_detailed"
-colname_is_target <- "is_target"
+# 対象エリア・地方名・基準年・カラム名等の設定は area_config.R で行う
+source("area_config.R")
 
 ff <- sprintf("00_BuildingList/%s.csv", area)
 # Use fread for better BOM handling
@@ -317,6 +314,21 @@ rownames(Buildings) <- Buildings[[1]]
 Buildings <- Buildings[, -1]
 
 Buildings$Region <- region
+
+# 「大字名」を基にエリア1〜4を分類
+area1_names <- c("日本橋本石町", "日本橋横山町", "日本橋浜町", "日本橋箱崎町", "日本橋茅場町",
+                  "日本橋蛎殻町", "日本橋馬喰町", "日本橋人形町", "日本橋兜町", "日本橋堀留町",
+                  "日本橋大伝馬町", "日本橋室町", "日本橋富沢町", "日本橋小伝馬町", "日本橋小網町",
+                  "日本橋小舟町", "日本橋本町", "日本橋中洲", "日本橋久松町", "八丁堀", "新川", "東日本橋")
+area2_names <- c("京橋", "八重洲", "日本橋")
+area3_names <- c("銀座", "銀座西")
+area4_names <- c("佃", "入船", "明石町", "晴海", "月島", "勝どき", "新富", "湊", "築地", "豊海町", "浜離宮庭園")
+
+Buildings$エリア <- NA
+Buildings$エリア[Buildings[["大字名"]] %in% area1_names] <- 1
+Buildings$エリア[Buildings[["大字名"]] %in% area2_names] <- 2
+Buildings$エリア[Buildings[["大字名"]] %in% area3_names] <- 3
+Buildings$エリア[Buildings[["大字名"]] %in% area4_names] <- 4
 
 dir <- "02_SelectedBuildingModels"
 if(!dir.exists(dir)){
@@ -447,6 +459,9 @@ if(MODE == 1){
   tar_b[["建物名"]]              <- Buildings[["建物名"]]
   tar_b[["building_usage"]]    <- Buildings[["building_usage"]]
   tar_b[["building_usage_detailed"]] <- Buildings[["building_usage_detailed"]]
+  tar_b[["地域冷暖房計画区域"]]       <- Buildings[["地域冷暖房計画区域"]]
+  tar_b[["is_target"]]         <- Buildings[[colname_is_target]]
+  tar_b[["エリア"]]              <- Buildings[["エリア"]]
 }
 
 make_scenario_for_all_candidates(area, region, year, tar_b)
